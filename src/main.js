@@ -554,7 +554,7 @@ async function renderHomepageEditor(communityId, community) {
       alert("Published.");
     };
 
-    document.getElementById("btnPreviewSite").onclick = () => {
+    document.getElementById("btnPreviewSite").onclick = async () => {
       const url = getPreviewUrl(community.siteUrl);
 
       if (!url) {
@@ -562,9 +562,19 @@ async function renderHomepageEditor(communityId, community) {
         return;
       }
 
-      const previewWindow = window.open(url, "_blank", "noopener,noreferrer");
+      const previewWindow = window.open("", "_blank", "noopener,noreferrer");
       if (!previewWindow) {
         alert("The preview window was blocked. Please allow pop-ups and try again.");
+        return;
+      }
+
+      try {
+        previewWindow.document.write("<p style=\"font-family:sans-serif;padding:16px;\">Preparing preview...</p>");
+        await saveHomepageDraft(communityId, draft);
+        previewWindow.location.replace(url);
+      } catch (err) {
+        previewWindow.close();
+        alert(err?.message || "Preview could not be prepared.");
       }
     };
   }
