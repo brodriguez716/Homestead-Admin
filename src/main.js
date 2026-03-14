@@ -562,18 +562,26 @@ async function renderHomepageEditor(communityId, community) {
         return;
       }
 
-      const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+      const previewWindow = window.open("about:blank", "_blank");
       if (!previewWindow) {
         alert("The preview window was blocked. Please allow pop-ups and try again.");
         return;
       }
 
       try {
-        previewWindow.document.write("<p style=\"font-family:sans-serif;padding:16px;\">Preparing preview...</p>");
+        previewWindow.document.write(`
+          <title>Preparing Preview</title>
+          <div style="font-family:sans-serif;padding:16px;">Preparing preview...</div>
+        `);
+        previewWindow.document.close();
         await saveHomepageDraft(communityId, draft);
-        previewWindow.location.replace(url);
+        previewWindow.location.href = url;
       } catch (err) {
-        previewWindow.close();
+        previewWindow.document.body.innerHTML = `
+          <div style="font-family:sans-serif;padding:16px;">
+            Preview could not be prepared. Please save the draft and try again.
+          </div>
+        `;
         alert(err?.message || "Preview could not be prepared.");
       }
     };
