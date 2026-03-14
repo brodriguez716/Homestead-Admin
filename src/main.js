@@ -407,7 +407,18 @@ function renderHomepageEditorState(editorArea, draft, changedSection) {
   });
 }
 
-function getPreviewUrl(siteUrl) {
+function encodePreviewData(data) {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let binary = "";
+
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function getPreviewUrl(siteUrl, draft) {
   const raw = (siteUrl || "").trim();
   if (!raw) return "";
 
@@ -416,6 +427,9 @@ function getPreviewUrl(siteUrl) {
   try {
     const url = new URL(withProtocol);
     url.searchParams.set("preview", "1");
+    url.hash = new URLSearchParams({
+      previewData: encodePreviewData(draft),
+    }).toString();
     return url.toString();
   } catch {
     return "";
@@ -555,34 +569,23 @@ async function renderHomepageEditor(communityId, community) {
     };
 
     document.getElementById("btnPreviewSite").onclick = async () => {
-      const url = getPreviewUrl(community.siteUrl);
+      const url = getPreviewUrl(community.siteUrl, draft);
 
       if (!url) {
         alert("Missing or invalid site URL for this community.");
         return;
       }
 
-      const previewWindow = window.open("about:blank", "_blank");
+      const previewWindow = window.open(url, "_blank");
       if (!previewWindow) {
         alert("The preview window was blocked. Please allow pop-ups and try again.");
         return;
       }
 
       try {
-        previewWindow.document.write(`
-          <title>Preparing Preview</title>
-          <div style="font-family:sans-serif;padding:16px;">Preparing preview...</div>
-        `);
-        previewWindow.document.close();
         await saveHomepageDraft(communityId, draft);
-        previewWindow.location.href = url;
       } catch (err) {
-        previewWindow.document.body.innerHTML = `
-          <div style="font-family:sans-serif;padding:16px;">
-            Preview could not be prepared. Please save the draft and try again.
-          </div>
-        `;
-        alert(err?.message || "Preview could not be prepared.");
+        console.error("Preview opened, but the draft could not be saved.", err);
       }
     };
   }
